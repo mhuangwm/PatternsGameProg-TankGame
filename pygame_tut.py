@@ -3,6 +3,34 @@ import pygame
 
 os.environ['SDL_VIDEO_CENTERED'] = '1'
 
+class Unit:
+    def __init__(self, state, position, tile):
+        self.state = state
+        self.position = position
+        self.tile = tile
+
+    def move(self, move_vector):
+        raise NotImplementedError()
+
+class Tank(Unit):
+    def move(self, move_vector):
+        new_pos = self.position + move_vector
+
+        # check world boundaries
+        if new_pos.x < 0 or new_pos.x >= self.state.world_size.x\
+        or new_pos.y < 0 or new_pos.y >= self.state.world_size.y:
+            return
+        
+        # check unit collision
+        for unit in self.state.units:
+            if new_pos == unit.position:
+                return
+
+        self.position = new_pos
+
+class Tower(Unit):
+    def move(self, move_vector): pass
+
 class GameState:
     world_size: pygame.math.Vector2
     tank_pos: pygame.math.Vector2
@@ -11,17 +39,18 @@ class GameState:
         self.world_size = pygame.math.Vector2(16,10)
         self.tank_pos = pygame.math.Vector2(0,0)
 
-    def update(self, move_tank_command: pygame.math.Vector2):
-        self.tank_pos += move_tank_command
-        if self.tank_pos.x < 0:
-            self.tank_pos.x = 0
-        elif self.tank_pos.x >= self.world_size.x:
-            self.tank_pos.x = self.world_size.x - 1
+        tower1_pos = pygame.math.Vector2(10,3)
+        tower2_pos = pygame.math.Vector2(10,5)
 
-        if self.tank_pos.y < 0:
-            self.tank_pos.y = 0
-        elif self.tank_pos.y > self.world_size.y:
-            self.tank_pos.y = self.world_size.y - 1
+        self.units = [
+            Tank(self, pygame.Vector2(5,4), pygame.math.Vector2(1,0)),
+            Tower(self, pygame.Vector2(10,3), pygame.math.Vector2(0,1)),
+            Tower(self, pygame.Vector2(10,5), pygame.math.Vector2(0,1)),
+        ]
+
+    def update(self, move_tank_command: pygame.math.Vector2):
+        for unit in self.units:
+            unit.move(move_tank_command)
 
 class UserInterface:
     def __init__(self):
@@ -65,19 +94,23 @@ class UserInterface:
     def update(self):
         self.game_state.update(self.move_tank_command)
 
-    def render(self):
-        self.window.fill((0,0,0))
-        sprite_point = self.game_state.tank_pos.elementwise() * self.cell_size
-        texture_point = pygame.math.Vector2(1,0).elementwise() * self.cell_size
-
-        # create a rectangle that contaisn the tank
+    def render_unit(self, unit: Unit):
+        # location on screen:
+        sprite_point = unit.position.elementwise() * self.cell_size
+        
+        # unit texture on tilemap
+        texture_point = unit.tile.elementwise() * self.cell_size
         texture_rect = pygame.Rect(
             int(texture_point.x), int(texture_point.y),
             int(self.cell_size.x), int(self.cell_size.y)
         )
-
-        # draw tank onto the surface
         self.window.blit(self.units_texture, sprite_point, texture_rect)
+
+    def render(self):
+        self.window.fill((0,0,0))
+        for unit in self.game_state.units:
+            self.render_unit(unit)
+
         pygame.display.update()
 
     def run(self):
@@ -86,22 +119,6 @@ class UserInterface:
             self.update()
             self.render()
             self.clock.tick(60)
-
-#import pygame
-#
-#unitsTexture = pygame.image.load("units.png")
-#window = pygame.display.set_mode((1024,640))
-#location = pygame.math.Vector2(96, 96)
-#rectangle = pygame.Rect(64, 0, 64, 64)
-#window.blit(unitsTexture,location,rectangle)
-#
-#while True:
-#    event = pygame.event.poll()
-#    if event.type == pygame.QUIT:
-#        break
-#    pygame.display.update()    
-#    
-#pygame.quit()
 
 user_interface = UserInterface()
 user_interface.run()
