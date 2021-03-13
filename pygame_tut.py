@@ -1,5 +1,6 @@
 import os
 import pygame
+from pygame.math import Vector2
 
 os.environ['SDL_VIDEO_CENTERED'] = '1'
 
@@ -35,6 +36,14 @@ class GameState:
     world_size: pygame.math.Vector2
     tank_pos: pygame.math.Vector2
 
+    @property
+    def world_width(self):
+        return int(self.world_size.x)
+
+    @property
+    def world_height(self): 
+        return int(self.world_size.y)
+
     def __init__(self):
         self.world_size = pygame.math.Vector2(16,10)
         self.tank_pos = pygame.math.Vector2(0,0)
@@ -47,18 +56,39 @@ class GameState:
             Tower(self, pygame.Vector2(10,3), pygame.math.Vector2(0,1)),
             Tower(self, pygame.Vector2(10,5), pygame.math.Vector2(0,1)),
         ]
-
+        self.ground = [ 
+            [ Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(6,2), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1)],
+            [ Vector2(5,1), Vector2(5,1), Vector2(7,1), Vector2(5,1), Vector2(5,1), Vector2(6,2), Vector2(7,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(6,1), Vector2(5,1), Vector2(5,1), Vector2(6,4), Vector2(7,2), Vector2(7,2)],
+            [ Vector2(5,1), Vector2(6,1), Vector2(5,1), Vector2(5,1), Vector2(6,1), Vector2(6,2), Vector2(5,1), Vector2(6,1), Vector2(6,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(6,2), Vector2(6,1), Vector2(5,1)],
+            [ Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(6,1), Vector2(6,2), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(6,2), Vector2(5,1), Vector2(7,1)],
+            [ Vector2(5,1), Vector2(7,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(6,5), Vector2(7,2), Vector2(7,2), Vector2(7,2), Vector2(7,2), Vector2(7,2), Vector2(7,2), Vector2(7,2), Vector2(8,5), Vector2(5,1), Vector2(5,1)],
+            [ Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(6,1), Vector2(6,2), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(6,2), Vector2(5,1), Vector2(7,1)],
+            [ Vector2(6,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(6,2), Vector2(5,1), Vector2(5,1), Vector2(7,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(6,2), Vector2(7,1), Vector2(5,1)],
+            [ Vector2(5,1), Vector2(5,1), Vector2(6,4), Vector2(7,2), Vector2(7,2), Vector2(8,4), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(6,2), Vector2(5,1), Vector2(5,1)],
+            [ Vector2(5,1), Vector2(5,1), Vector2(6,2), Vector2(5,1), Vector2(5,1), Vector2(7,1), Vector2(5,1), Vector2(5,1), Vector2(6,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(7,4), Vector2(7,2), Vector2(7,2)],
+            [ Vector2(5,1), Vector2(5,1), Vector2(6,2), Vector2(6,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1)]
+        ]
+        
     def update(self, move_tank_command: pygame.math.Vector2):
         for unit in self.units:
             unit.move(move_tank_command)
 
 class UserInterface:
+    @property
+    def cell_width(self):
+        return int(self.cell_size.x)
+
+    @property
+    def cell_height(self):
+        return int(self.cell_size.y)
+
     def __init__(self):
         pygame.init()
         self.game_state = GameState()
 
         self.cell_size = pygame.math.Vector2(64,64)
         self.units_texture = pygame.image.load("units.png")
+        self.grounds_texture = pygame.image.load("ground.png")
         
         window_size = self.game_state.world_size.elementwise() * self.cell_size
         self.window = pygame.display.set_mode(
@@ -102,12 +132,25 @@ class UserInterface:
         texture_point = unit.tile.elementwise() * self.cell_size
         texture_rect = pygame.Rect(
             int(texture_point.x), int(texture_point.y),
-            int(self.cell_size.x), int(self.cell_size.y)
+            int(self.cell_width), int(self.cell_height)
         )
         self.window.blit(self.units_texture, sprite_point, texture_rect)
 
+    def render_ground(self, position, tile):
+        sprite_point = position.elementwise() * self.cell_size
+        texture_point = tile.elementwise() * self.cell_size
+        texture_rect = pygame.Rect(
+            int(texture_point.x), int(texture_point.y),
+            int(self.cell_width), int(self.cell_height)
+        )
+        self.window.blit(self.grounds_texture, sprite_point, texture_rect)
+
     def render(self):
         self.window.fill((0,0,0))
+        for y in range (int(self.game_state.world_size.y)):
+            for x in range(int(self.game_state.world_size.x)):
+                self.render_ground(pygame.math.Vector2(x,y), self.game_state.ground[y][x])
+
         for unit in self.game_state.units:
             self.render_unit(unit)
 
