@@ -1,8 +1,12 @@
+from pygame.math import Vector2
+
 class Unit:
     def __init__(self, state, position, tile):
         self.state = state
         self.position = position
         self.tile = tile
+        self.orientation = 0
+        self.weapon_target = Vector2(0,0)
 
     def move(self, move_vector):
         raise NotImplementedError()
@@ -11,6 +15,9 @@ class Unit:
         raise NotImplementedError()
 
 class Tank(Unit):
+    def __init__(self, state, position, tile):
+        super().__init__(state,position,tile)
+
     def move(self, move_vector):
         new_pos = self.position + move_vector
 
@@ -30,6 +37,9 @@ class Tank(Unit):
         self.weapon_target = target
 
 class Tower(Unit):
+    def __init__(self, state, position, tile):
+        super().__init__(state, position, tile)
+
     def move(self, move_vector): pass
     def orient_weapon(self, target):
         self.weapon_target = self.state.units[0].position
