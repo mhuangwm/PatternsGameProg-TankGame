@@ -3,7 +3,7 @@ import pygame
 import math
 from pygame.math import Vector2
 from gamestate import GameState
-from layer import ArrayLayer, UnitsLayer, BulletsLayer
+from layer import ArrayLayer, UnitsLayer, BulletsLayer, ExplosionsLayer
 from command import MoveCommand, TargetCommand, ShootCommand, MoveBulletCommand, DeleteDestroyedCommand
 
 os.environ['SDL_VIDEO_CENTERED'] = '1'
@@ -19,8 +19,12 @@ class UserInterface:
             ArrayLayer(self, "ground.png", self.game_state, self.game_state.ground),
             ArrayLayer(self, "walls.png", self.game_state, self.game_state.walls),
             UnitsLayer(self, "units.png", self.game_state, self.game_state.units),
-            BulletsLayer(self, "explosions.png", self.game_state, self.game_state.bullets)
+            BulletsLayer(self, "explosions.png", self.game_state, self.game_state.bullets),
+            ExplosionsLayer(self, "explosions.png")
         ]
+
+        for layer in self.layers:
+            self.game_state.add_observer(layer)
 
         self.commands = []
         self.player_unit = self.game_state.units[0]

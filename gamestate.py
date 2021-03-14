@@ -14,11 +14,11 @@ class GameState:
         tower1_pos = pygame.math.Vector2(10,3)
         tower2_pos = pygame.math.Vector2(10,5)
 
-        self.units = [
-            Unit(self, pygame.Vector2(5,4), pygame.math.Vector2(1,0)),
-            Unit(self, pygame.Vector2(10,3), pygame.math.Vector2(0,1)),
-            Unit(self, pygame.Vector2(10,5), pygame.math.Vector2(0,1)),
-        ]
+        #self.units = [
+        #    Unit(self, pygame.Vector2(5,4), pygame.math.Vector2(1,0)),
+        #    Unit(self, pygame.Vector2(10,3), pygame.math.Vector2(0,1)),
+        #    Unit(self, pygame.Vector2(10,5), pygame.math.Vector2(0,1)),
+        #]
         self.ground = [ 
             [ Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(6,2), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1)],
             [ Vector2(5,1), Vector2(5,1), Vector2(7,1), Vector2(5,1), Vector2(5,1), Vector2(6,2), Vector2(7,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(6,1), Vector2(5,1), Vector2(5,1), Vector2(6,4), Vector2(7,2), Vector2(7,2)],
@@ -45,10 +45,20 @@ class GameState:
             [ None, None, None, None, None, None, None, None, None, Vector2(2,3), Vector2(1,1), Vector2(1,1), Vector2(1,1), Vector2(1,1), Vector2(1,1), Vector2(1,1)]
         ]
 
+        self.units = [
+            Unit(self,Vector2(1,9),Vector2(1,0)),
+            Unit(self,Vector2(6,3),Vector2(0,2)),
+            Unit(self,Vector2(6,5),Vector2(0,2)),
+            Unit(self,Vector2(13,3),Vector2(0,1)),
+            Unit(self,Vector2(13,6),Vector2(0,1))
+        ]
+
         self.bullets = []
         self.bullet_speed = 0.1
         self.bullet_range = 4
         self.bullet_delay = 10
+
+        self.observers = []
         
     @property
     def world_width(self):
@@ -81,3 +91,10 @@ class GameState:
         if unit is None or unit.status != "alive":
             return None
         return unit
+    
+    def add_observer(self, observer):
+        self.observers.append(observer)
+    
+    def notify_unit_destroyed(self, unit):
+        for observer in self.observers:
+            observer.unit_destroyed(unit)

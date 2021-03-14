@@ -1,8 +1,9 @@
 import math
 import pygame
 from pygame.math import Vector2
+from gamestate_observer import GameStateObserver
 
-class Layer:
+class Layer(GameStateObserver):
     def __init__(self, ui, image_file):
         self.ui = ui
         self.texture = pygame.image.load(image_file)
@@ -75,3 +76,24 @@ class BulletsLayer(Layer):
         for bullet in self.bullets:
             if bullet.status == "alive":
                 self.render_tile(surface, bullet.position, bullet.tile, bullet.orientation)
+
+class ExplosionsLayer(Layer):
+    def __init__(self, ui, image_file):
+        super().__init__(ui, image_file)
+        self.explosions = []
+        self.max_frame_index = 27
+
+    def add(self, position):
+        self.explosions.append({ 'Position': position, 'FrameIndex': 0})
+
+    def unit_destroyed(self, unit):
+        self.add(unit.position)
+    
+    def render(self, surface):
+        for explosion in self.explosions:
+            frame_index = math.floor(explosion['FrameIndex'])
+            self.render_tile(surface, explosion['Position'], Vector2(frame_index, 4))
+            explosion['FrameIndex'] += 0.5
+            self.explosions = [ explosion for explosion in self.explosions
+                                if explosion['FrameIndex'] < self.max_frame_index
+                              ]

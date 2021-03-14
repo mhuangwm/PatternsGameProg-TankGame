@@ -99,6 +99,7 @@ class MoveBulletCommand(Command):
         if not unit is None and unit != self.bullet.unit:
             self.bullet.status = "destroyed"
             unit.status = "destroyed"
+            self.state.notify_unit_destroyed(unit)
             return
 
         self.bullet.position = new_pos
