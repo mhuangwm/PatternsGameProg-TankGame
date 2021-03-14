@@ -1,5 +1,6 @@
 import os
 import pygame
+import math
 from pygame.math import Vector2
 
 os.environ['SDL_VIDEO_CENTERED'] = '1'
@@ -11,6 +12,9 @@ class Unit:
         self.tile = tile
 
     def move(self, move_vector):
+        raise NotImplementedError()
+
+    def orient_weapon(self):
         raise NotImplementedError()
 
 class Tank(Unit):
@@ -29,8 +33,13 @@ class Tank(Unit):
 
         self.position = new_pos
 
+    def orient_weapon(self, target):
+        self.weapon_target = target
+
 class Tower(Unit):
     def move(self, move_vector): pass
+    def orient_weapon(self, target):
+        self.weapon_target = self.state.units[0].position
 
 class GameState:
     world_size: pygame.math.Vector2
@@ -82,9 +91,11 @@ class GameState:
             [ None, None, None, None, None, None, None, None, None, Vector2(2,3), Vector2(1,1), Vector2(1,1), Vector2(1,1), Vector2(1,1), Vector2(1,1), Vector2(1,1)]
         ]
         
-    def update(self, move_tank_command: pygame.math.Vector2):
+    def update(self, move_tank_command: pygame.math.Vector2, target_command: Vector2):
         for unit in self.units:
             unit.move(move_tank_command)
+        for unit in self.units:
+            unit.orient_weapon(target_command)
 
 class UserInterface:
     @property
@@ -116,6 +127,7 @@ class UserInterface:
         pygame.display.set_icon(pygame.image.load("icon.png"))
 
         self.move_tank_command = pygame.math.Vector2(0,0)
+        self.target_command = Vector2(0,0)
         self.clock = pygame.time.Clock()
         self.running = True
 
@@ -138,8 +150,12 @@ class UserInterface:
                 elif event.key == pygame.K_UP:
                     self.move_tank_command.y = -1
 
+        mouse_pos = pygame.mouse.get_pos()
+        self.target_command.x = mouse_pos[0] / self.cell_width - 0.5
+        self.target_command.y = mouse_pos[1] / self.cell_height - 0.5
+
     def update(self):
-        self.game_state.update(self.move_tank_command)
+        self.game_state.update(self.move_tank_command, self.target_command)
 
     def render(self):
         self.window.fill((0,0,0))
@@ -160,7 +176,7 @@ class Layer:
         self.ui = ui
         self.texture = pygame.image.load(image_file)
 
-    def render_tile(self, surface, position, tile):
+    def render_tile(self, surface, position, tile, angle=None):
         sprite_point = position.elementwise() * self.ui.cell_size
 
         # location of texture
@@ -173,7 +189,20 @@ class Layer:
         )
 
         # blit the texture onto the surface
-        surface.blit(self.texture, sprite_point, tecture_rect)
+        if angle is None:
+            surface.blit(self.texture, sprite_point, tecture_rect)
+        else:
+            texture_tile = pygame.surface.Surface(
+                (self.ui.cell_width, self.ui.cell_height), pygame.SRCALPHA
+            )
+            texture_tile.blit(self.texture, (0,0), tecture_rect)
+            rotated_tile = pygame.transform.rotate(texture_tile, angle)
+            # calculated new sprite point after rotation
+            sprite_point.x -= (rotated_tile.get_width() - texture_tile.get_width()) // 2
+            sprite_point.y -= (rotated_tile.get_height() - texture_tile.get_height()) // 2
+
+            surface.blit(rotated_tile, sprite_point)
+
 
     def render(self, surface):
         raise NotImplementedError()
@@ -200,7 +229,9 @@ class UnitsLayer(Layer):
     def render(self, surface):
         for unit in self.units:
             self.render_tile(surface, unit.position, unit.tile)
-            self.render_tile(surface, unit.position, Vector2(0, 6))
+            size = unit.weapon_target - unit.position
+            angle = math.atan2(-size.x, -size.y) * 180 / math.pi
+            self.render_tile(surface, unit.position, Vector2(0, 6), angle)
 
 user_interface = UserInterface()
 user_interface.run()
