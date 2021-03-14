@@ -3,8 +3,8 @@ import pygame
 import math
 from pygame.math import Vector2
 from gamestate import GameState
-from layer import ArrayLayer, UnitsLayer
-from command import MoveCommand, TargetCommand
+from layer import ArrayLayer, UnitsLayer, BulletsLayer
+from command import MoveCommand, TargetCommand, ShootCommand, MoveBulletCommand, DeleteDestroyedCommand
 
 os.environ['SDL_VIDEO_CENTERED'] = '1'
 
@@ -18,7 +18,8 @@ class UserInterface:
         self.layers = [
             ArrayLayer(self, "ground.png", self.game_state, self.game_state.ground),
             ArrayLayer(self, "walls.png", self.game_state, self.game_state.walls),
-            UnitsLayer(self, "units.png", self.game_state, self.game_state.units)
+            UnitsLayer(self, "units.png", self.game_state, self.game_state.units),
+            BulletsLayer(self, "explosions.png", self.game_state, self.game_state.bullets)
         ]
 
         self.commands = []
@@ -47,6 +48,7 @@ class UserInterface:
 
     def process_input(self):
         move_vector = Vector2()
+        mouse_clicked = False
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.running = False
@@ -63,8 +65,10 @@ class UserInterface:
                     move_vector.y = 1
                 elif event.key == pygame.K_UP:
                     move_vector.y = -1
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                mouse_clicked = True
 
-        if move_vector.x != 0 or move_vector.y != 0:
+        if (move_vector.x != 0 or move_vector.y != 0) and (self.player_unit.status != "destroyed"):
             command = MoveCommand(self.game_state, self.player_unit, move_vector)
             self.commands.append(command)
         
@@ -79,11 +83,24 @@ class UserInterface:
             if unit != self.player_unit:
                 command = TargetCommand(self.game_state, unit, self.player_unit.position)
                 self.commands.append(command)
+                # create shoot command if player too close
+                distance = unit.position.distance_to(self.player_unit.position)
+                if distance <= self.game_state.bullet_range:
+                    self.commands.append(ShootCommand(self.game_state, unit))
+        
+        if mouse_clicked:
+            self.commands.append(ShootCommand(self.game_state, self.player_unit))
+
+        for bullet in self.game_state.bullets:
+            self.commands.append(MoveBulletCommand(self.game_state, bullet))
+
+        self.commands.append(DeleteDestroyedCommand(self.game_state.bullets))
 
     def update(self):
         for command in self.commands:
             command.run()
         self.commands.clear()
+        self.game_state.epoch += 1
 
     def render(self):
         self.window.fill((0,0,0))

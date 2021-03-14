@@ -1,3 +1,6 @@
+from pygame.math import Vector2
+from unit import Bullet
+
 class Command:
     def run(self):
         raise NotImplementedError()
@@ -48,3 +51,62 @@ class TargetCommand(Command):
     def run(self):
         self.unit.weapon_target = self.target
 
+class ShootCommand(Command):
+    def __init__(self, state, unit):
+        self.state = state
+        self.unit = unit
+
+    def run(self):
+        if self.unit.status != "alive":
+            return
+        if self.state.epoch - self.unit.last_bullet_epoch\
+        < self.state.bullet_delay:
+            return
+
+        self.unit.last_bullet_epoch = self.state.epoch
+        self.state.bullets.append(Bullet(self.state, self.unit))
+
+class MoveBulletCommand(Command):
+    def __init__(self, state, bullet):
+        self.state = state
+        self.bullet = bullet
+
+    def run(self):
+        direction = (self.bullet.end_position - self.bullet.start_position).normalize()
+        new_pos = self.bullet.position + self.state.bullet_speed * direction
+        new_center_pos = new_pos + Vector2(0.5,0.5)
+
+        # if bullet goes outside the world, destroy it
+        if not self.state.is_inside(new_pos):
+            self.bullet.status = "destroyed"
+            return
+
+        # if bullet goes towards the target cell, destroy it
+        if ((direction.x > 0 and new_pos.x >= self.bullet.end_position.x) \
+        or (direction.x < 0 and new_pos.x <= self.bullet.end_position.x)) \
+        and ((direction.y >= 0 and new_pos.y >= self.bullet.end_position.y) \
+        or (direction.y < 0 and new_pos.y <= self.bullet.end_position.y)):
+            self.bullet.status = "destroyed"
+            return
+
+        # if bullet is outside of allowed rangem destroy it:
+        if new_pos.distance_to(self.bullet.start_position) >= self.state.bullet_range:
+            self.bullet.status = "destroyed"
+            return
+
+        # if the bullet hits a unit, destroy the bullet and the unit
+        unit = self.state.find_live_unit(new_center_pos)
+        if not unit is None and unit != self.bullet.unit:
+            self.bullet.status = "destroyed"
+            unit.status = "destroyed"
+            return
+
+        self.bullet.position = new_pos
+
+class DeleteDestroyedCommand(Command):
+    def __init__(self, item_list):
+        self.item_list = item_list
+
+    def run(self):
+        new_list = [item for item in self.item_list if item.status == "alive"]
+        self.item_list[:] = new_list

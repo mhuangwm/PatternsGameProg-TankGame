@@ -60,6 +60,18 @@ class UnitsLayer(Layer):
     def render(self, surface):
         for unit in self.units:
             self.render_tile(surface, unit.position, unit.tile)
-            size = unit.weapon_target - unit.position
-            angle = math.atan2(-size.x, -size.y) * 180 / math.pi
-            self.render_tile(surface, unit.position, Vector2(0, 6), angle)
+            if unit.status == "alive":
+                size = unit.weapon_target - unit.position
+                angle = math.atan2(-size.x, -size.y) * 180 / math.pi
+                self.render_tile(surface, unit.position, Vector2(0, 6), angle)
+
+class BulletsLayer(Layer):
+    def __init__(self, ui, image_file, game_state, bullets):
+        super().__init__(ui, image_file)
+        self.game_state = game_state
+        self.bullets = bullets
+
+    def render(self, surface):
+        for bullet in self.bullets:
+            if bullet.status == "alive":
+                self.render_tile(surface, bullet.position, bullet.tile, bullet.orientation)
