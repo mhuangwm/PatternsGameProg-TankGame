@@ -4,96 +4,116 @@ from pygame.math import Vector2
 from gamestate_observer import GameStateObserver
 
 class Layer(GameStateObserver):
-    def __init__(self, ui, image_file):
-        self.ui = ui
-        self.texture = pygame.image.load(image_file)
+    def __init__(self,cellSize,imageFile):
+        self.cellSize = cellSize
+        self.texture = pygame.image.load(imageFile)
+        
+    def setTileset(self,cellSize,imageFile):
+        self.cellSize = cellSize
+        self.texture = pygame.image.load(imageFile)
+        
+    @property
+    def cellWidth(self):
+        return int(self.cellSize.x)
 
-    def render_tile(self, surface, position, tile, angle=None):
-        sprite_point = position.elementwise() * self.ui.cell_size
-
-        # location of texture
-        texture_point = tile.elementwise() * self.ui.cell_size
-
-        # create rectangle to contain texture
-        tecture_rect = pygame.Rect(
-            int(texture_point.x), int(texture_point.y),
-            int(self.ui.cell_width), int(self.ui.cell_height)
-        )
-
-        # blit the texture onto the surface
+    @property
+    def cellHeight(self):
+        return int(self.cellSize.y)        
+    
+    def unitDestroyed(self,unit):
+        pass
+        
+    def renderTile(self,surface,position,tile,angle=None):
+        # Location on screen
+        spritePoint = position.elementwise()*self.cellSize
+        
+        # Texture
+        texturePoint = tile.elementwise()*self.cellSize
+        textureRect = pygame.Rect(int(texturePoint.x), int(texturePoint.y), self.cellWidth, self.cellHeight)
+        
+        # Draw
         if angle is None:
-            surface.blit(self.texture, sprite_point, tecture_rect)
+            surface.blit(self.texture,spritePoint,textureRect)
         else:
-            texture_tile = pygame.surface.Surface(
-                (self.ui.cell_width, self.ui.cell_height), pygame.SRCALPHA
-            )
-            texture_tile.blit(self.texture, (0,0), tecture_rect)
-            rotated_tile = pygame.transform.rotate(texture_tile, angle)
-            # calculated new sprite point after rotation
-            sprite_point.x -= (rotated_tile.get_width() - texture_tile.get_width()) // 2
-            sprite_point.y -= (rotated_tile.get_height() - texture_tile.get_height()) // 2
+            # Extract the tile in a surface
+            textureTile = pygame.Surface((self.cellWidth,self.cellHeight),pygame.SRCALPHA)
+            textureTile.blit(self.texture,(0,0),textureRect)
+            # Rotate the surface with the tile
+            rotatedTile = pygame.transform.rotate(textureTile,angle)
+            # Compute the new coordinate on the screen, knowing that we rotate around the center of the tile
+            spritePoint.x -= (rotatedTile.get_width() - textureTile.get_width()) // 2
+            spritePoint.y -= (rotatedTile.get_height() - textureTile.get_height()) // 2
+            # Render the rotatedTile
+            surface.blit(rotatedTile,spritePoint)
 
-            surface.blit(rotated_tile, sprite_point)
-
-
-    def render(self, surface):
-        raise NotImplementedError()
-
+    def render(self,surface):
+        raise NotImplementedError() 
+    
 class ArrayLayer(Layer):
-    def __init__(self, ui, image_file, game_state, array):
-        super().__init__(ui, image_file)
-        self.game_state = game_state
+    def __init__(self,ui,imageFile,gameState,array,surfaceFlags=pygame.SRCALPHA):
+        super().__init__(ui,imageFile)
+        self.gameState = gameState
         self.array = array
-
-    def render(self, surface):
-        for y in range(self.game_state.world_height):
-            for x in range(self.game_state.world_width):
-                tile = self.array[y][x]
-                if not tile is None:
-                    self.render_tile(surface, Vector2(x,y), tile)
+        self.surface = None
+        self.surfaceFlags = surfaceFlags
+        
+    def setTileset(self,cellSize,imageFile):
+        super().setTileset(cellSize,imageFile)
+        self.surface = None
+        
+    def render(self,surface):
+        if self.surface is None:
+            self.surface = pygame.Surface(surface.get_size(),flags=self.surfaceFlags)
+            for y in range(self.gameState.worldHeight):
+                for x in range(self.gameState.worldWidth):
+                    tile = self.array[y][x]
+                    if not tile is None:
+                        self.renderTile(self.surface,Vector2(x,y),tile)
+        surface.blit(self.surface,(0,0))
 
 class UnitsLayer(Layer):
-    def __init__(self, ui, image_file, game_state, units):
-        super().__init__(ui, image_file)
-        self.game_state = game_state
+    def __init__(self,ui,imageFile,gameState,units):
+        super().__init__(ui,imageFile)
+        self.gameState = gameState
         self.units = units
-
-    def render(self, surface):
+        
+    def render(self,surface):
         for unit in self.units:
-            self.render_tile(surface, unit.position, unit.tile)
+            self.renderTile(surface,unit.position,unit.tile,unit.orientation)
             if unit.status == "alive":
-                size = unit.weapon_target - unit.position
-                angle = math.atan2(-size.x, -size.y) * 180 / math.pi
-                self.render_tile(surface, unit.position, Vector2(0, 6), angle)
-
+                size = unit.weaponTarget - unit.position
+                angle = math.atan2(-size.x,-size.y) * 180 / math.pi
+                self.renderTile(surface,unit.position,Vector2(0,6),angle)
+                
 class BulletsLayer(Layer):
-    def __init__(self, ui, image_file, game_state, bullets):
-        super().__init__(ui, image_file)
-        self.game_state = game_state
+    def __init__(self,ui,imageFile,gameState,bullets):
+        super().__init__(ui,imageFile)
+        self.gameState = gameState
         self.bullets = bullets
-
-    def render(self, surface):
+        
+    def render(self,surface):
         for bullet in self.bullets:
             if bullet.status == "alive":
-                self.render_tile(surface, bullet.position, bullet.tile, bullet.orientation)
-
+                self.renderTile(surface,bullet.position,bullet.tile,bullet.orientation)
+                
 class ExplosionsLayer(Layer):
-    def __init__(self, ui, image_file):
-        super().__init__(ui, image_file)
+    def __init__(self,ui,imageFile):
+        super().__init__(ui,imageFile)
         self.explosions = []
-        self.max_frame_index = 27
+        self.maxFrameIndex = 27
+        
+    def add(self,position):
+        self.explosions.append({
+            'position': position,
+            'frameIndex': 0
+        })
 
-    def add(self, position):
-        self.explosions.append({ 'Position': position, 'FrameIndex': 0})
-
-    def unit_destroyed(self, unit):
+    def unitDestroyed(self,unit):
         self.add(unit.position)
-    
-    def render(self, surface):
+        
+    def render(self,surface):
         for explosion in self.explosions:
-            frame_index = math.floor(explosion['FrameIndex'])
-            self.render_tile(surface, explosion['Position'], Vector2(frame_index, 4))
-            explosion['FrameIndex'] += 0.5
-            self.explosions = [ explosion for explosion in self.explosions
-                                if explosion['FrameIndex'] < self.max_frame_index
-                              ]
+            frameIndex = math.floor(explosion['frameIndex'])
+            self.renderTile(surface,explosion['position'],Vector2(frameIndex,4))
+            explosion['frameIndex'] += 0.5
+        self.explosions = [ explosion for explosion in self.explosions if explosion['frameIndex'] < self.maxFrameIndex ]

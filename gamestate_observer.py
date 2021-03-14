@@ -1,3 +1,3 @@
-class GameStateObserver:
-    def unit_destroyed(self, unit):
+class GameStateObserver():
+    def unitDestroyed(self,unit):
         pass
