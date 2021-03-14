@@ -2,110 +2,12 @@ import os
 import pygame
 import math
 from pygame.math import Vector2
+from gamestate import GameState
+from layer import ArrayLayer, UnitsLayer
 
 os.environ['SDL_VIDEO_CENTERED'] = '1'
 
-class Unit:
-    def __init__(self, state, position, tile):
-        self.state = state
-        self.position = position
-        self.tile = tile
-
-    def move(self, move_vector):
-        raise NotImplementedError()
-
-    def orient_weapon(self):
-        raise NotImplementedError()
-
-class Tank(Unit):
-    def move(self, move_vector):
-        new_pos = self.position + move_vector
-
-        # check world boundaries
-        if new_pos.x < 0 or new_pos.x >= self.state.world_size.x\
-        or new_pos.y < 0 or new_pos.y >= self.state.world_size.y:
-            return
-        
-        # check unit collision
-        for unit in self.state.units:
-            if new_pos == unit.position:
-                return
-
-        self.position = new_pos
-
-    def orient_weapon(self, target):
-        self.weapon_target = target
-
-class Tower(Unit):
-    def move(self, move_vector): pass
-    def orient_weapon(self, target):
-        self.weapon_target = self.state.units[0].position
-
-class GameState:
-    world_size: pygame.math.Vector2
-    tank_pos: pygame.math.Vector2
-
-    @property
-    def world_width(self):
-        return int(self.world_size.x)
-
-    @property
-    def world_height(self): 
-        return int(self.world_size.y)
-
-    def __init__(self):
-        self.world_size = pygame.math.Vector2(16,10)
-        self.tank_pos = pygame.math.Vector2(0,0)
-
-        tower1_pos = pygame.math.Vector2(10,3)
-        tower2_pos = pygame.math.Vector2(10,5)
-
-        self.units = [
-            Tank(self, pygame.Vector2(5,4), pygame.math.Vector2(1,0)),
-            Tower(self, pygame.Vector2(10,3), pygame.math.Vector2(0,1)),
-            Tower(self, pygame.Vector2(10,5), pygame.math.Vector2(0,1)),
-        ]
-        self.ground = [ 
-            [ Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(6,2), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1)],
-            [ Vector2(5,1), Vector2(5,1), Vector2(7,1), Vector2(5,1), Vector2(5,1), Vector2(6,2), Vector2(7,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(6,1), Vector2(5,1), Vector2(5,1), Vector2(6,4), Vector2(7,2), Vector2(7,2)],
-            [ Vector2(5,1), Vector2(6,1), Vector2(5,1), Vector2(5,1), Vector2(6,1), Vector2(6,2), Vector2(5,1), Vector2(6,1), Vector2(6,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(6,2), Vector2(6,1), Vector2(5,1)],
-            [ Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(6,1), Vector2(6,2), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(6,2), Vector2(5,1), Vector2(7,1)],
-            [ Vector2(5,1), Vector2(7,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(6,5), Vector2(7,2), Vector2(7,2), Vector2(7,2), Vector2(7,2), Vector2(7,2), Vector2(7,2), Vector2(7,2), Vector2(8,5), Vector2(5,1), Vector2(5,1)],
-            [ Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(6,1), Vector2(6,2), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(6,2), Vector2(5,1), Vector2(7,1)],
-            [ Vector2(6,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(6,2), Vector2(5,1), Vector2(5,1), Vector2(7,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(6,2), Vector2(7,1), Vector2(5,1)],
-            [ Vector2(5,1), Vector2(5,1), Vector2(6,4), Vector2(7,2), Vector2(7,2), Vector2(8,4), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(6,2), Vector2(5,1), Vector2(5,1)],
-            [ Vector2(5,1), Vector2(5,1), Vector2(6,2), Vector2(5,1), Vector2(5,1), Vector2(7,1), Vector2(5,1), Vector2(5,1), Vector2(6,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(7,4), Vector2(7,2), Vector2(7,2)],
-            [ Vector2(5,1), Vector2(5,1), Vector2(6,2), Vector2(6,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1), Vector2(5,1)]
-        ]
-
-        self.walls = [
-            [ None, None, None, None, None, None, None, None, None, Vector2(1,3), Vector2(1,1), Vector2(1,1), Vector2(1,1), Vector2(1,1), Vector2(1,1), Vector2(1,1)],
-            [ None, None, None, None, None, None, None, None, None, Vector2(2,1), None, None, None, None, None, None],
-            [ None, None, None, None, None, None, None, None, None, Vector2(2,1), None, None, Vector2(1,3), Vector2(1,1), Vector2(0,3), None],
-            [ None, None, None, None, None, None, None, Vector2(1,1), Vector2(1,1), Vector2(3,3), None, None, Vector2(2,1), None, Vector2(2,1), None],
-            [ None, None, None, None, None, None, None, None, None, None, None, None, Vector2(2,1), None, Vector2(2,1), None],
-            [ None, None, None, None, None, None, None, Vector2(1,1), Vector2(1,1), Vector2(0,3), None, None, Vector2(2,1), None, Vector2(2,1), None],
-            [ None, None, None, None, None, None, None, None, None, Vector2(2,1), None, None, Vector2(2,1), None, Vector2(2,1), None],
-            [ None, None, None, None, None, None, None, None, None, Vector2(2,1), None, None, Vector2(2,3), Vector2(1,1), Vector2(3,3), None],
-            [ None, None, None, None, None, None, None, None, None, Vector2(2,1), None, None, None, None, None, None],
-            [ None, None, None, None, None, None, None, None, None, Vector2(2,3), Vector2(1,1), Vector2(1,1), Vector2(1,1), Vector2(1,1), Vector2(1,1), Vector2(1,1)]
-        ]
-        
-    def update(self, move_tank_command: pygame.math.Vector2, target_command: Vector2):
-        for unit in self.units:
-            unit.move(move_tank_command)
-        for unit in self.units:
-            unit.orient_weapon(target_command)
-
 class UserInterface:
-    @property
-    def cell_width(self):
-        return int(self.cell_size.x)
-
-    @property
-    def cell_height(self):
-        return int(self.cell_size.y)
-
     def __init__(self):
         pygame.init()
         self.game_state = GameState()
@@ -130,6 +32,15 @@ class UserInterface:
         self.target_command = Vector2(0,0)
         self.clock = pygame.time.Clock()
         self.running = True
+
+    @property
+    def cell_width(self):
+        return int(self.cell_size.x)
+
+    @property
+    def cell_height(self):
+        return int(self.cell_size.y)
+
 
     def process_input(self):
         self.move_tank_command = pygame.math.Vector2(0,0)
@@ -170,68 +81,6 @@ class UserInterface:
             self.update()
             self.render()
             self.clock.tick(60)
-
-class Layer:
-    def __init__(self, ui, image_file):
-        self.ui = ui
-        self.texture = pygame.image.load(image_file)
-
-    def render_tile(self, surface, position, tile, angle=None):
-        sprite_point = position.elementwise() * self.ui.cell_size
-
-        # location of texture
-        texture_point = tile.elementwise() * self.ui.cell_size
-
-        # create rectangle to contain texture
-        tecture_rect = pygame.Rect(
-            int(texture_point.x), int(texture_point.y),
-            int(self.ui.cell_width), int(self.ui.cell_height)
-        )
-
-        # blit the texture onto the surface
-        if angle is None:
-            surface.blit(self.texture, sprite_point, tecture_rect)
-        else:
-            texture_tile = pygame.surface.Surface(
-                (self.ui.cell_width, self.ui.cell_height), pygame.SRCALPHA
-            )
-            texture_tile.blit(self.texture, (0,0), tecture_rect)
-            rotated_tile = pygame.transform.rotate(texture_tile, angle)
-            # calculated new sprite point after rotation
-            sprite_point.x -= (rotated_tile.get_width() - texture_tile.get_width()) // 2
-            sprite_point.y -= (rotated_tile.get_height() - texture_tile.get_height()) // 2
-
-            surface.blit(rotated_tile, sprite_point)
-
-
-    def render(self, surface):
-        raise NotImplementedError()
-
-class ArrayLayer(Layer):
-    def __init__(self, ui, image_file, game_state, array):
-        super().__init__(ui, image_file)
-        self.game_state = game_state
-        self.array = array
-
-    def render(self, surface):
-        for y in range(self.game_state.world_height):
-            for x in range(self.game_state.world_width):
-                tile = self.array[y][x]
-                if not tile is None:
-                    self.render_tile(surface, Vector2(x,y), tile)
-
-class UnitsLayer(Layer):
-    def __init__(self, ui, image_file, game_state, units):
-        super().__init__(ui, image_file)
-        self.game_state = game_state
-        self.units = units
-
-    def render(self, surface):
-        for unit in self.units:
-            self.render_tile(surface, unit.position, unit.tile)
-            size = unit.weapon_target - unit.position
-            angle = math.atan2(-size.x, -size.y) * 180 / math.pi
-            self.render_tile(surface, unit.position, Vector2(0, 6), angle)
 
 user_interface = UserInterface()
 user_interface.run()
