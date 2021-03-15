@@ -1,3 +1,4 @@
 {
-    "python.pythonPath": "/home/zlemonpie/.pyenv/versions/3.8.5/bin/python"
+    "python.pythonPath": "/home/zlemonpie/.pyenv/versions/3.8.5/bin/python",
+    "editor.tabSize": 4
 }
