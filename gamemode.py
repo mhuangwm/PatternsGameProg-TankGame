@@ -141,7 +141,8 @@ class PlayGameMode(GameMode):
             ArrayLayer(self.cellSize,"walls.png",self.gameState,self.gameState.walls),
             UnitsLayer(self.cellSize,"units.png",self.gameState,self.gameState.units),
             BulletsLayer(self.cellSize,"explosions.png",self.gameState,self.gameState.bullets),
-            ExplosionsLayer(self.cellSize,"explosions.png")
+            ExplosionsLayer(self.cellSize,"explosions.png"),
+            SoundLayer("170274__knova__rifle-fire-synthetic.wav","110115__ryansnook__small-explosion.wav")
         ]
         
         # All layers listen to game state events
@@ -207,6 +208,7 @@ class PlayGameMode(GameMode):
             self.commands.append(
                 ShootCommand(self.gameState,self.playerUnit)
             )
+            self.gameState.notifyBulletFired(self.playerUnit)
                 
         # Other units always target the player's unit and shoot if close enough
         for unit in self.gameState.units:

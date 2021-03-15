@@ -63,3 +63,7 @@ class GameState():
     def notifyUnitDestroyed(self,unit):
         for observer in self.observers:
             observer.unitDestroyed(unit)
+
+    def notifyBulletFired(self, unit):
+        for observer in self.observers:
+            observer.bulletFired(unit)

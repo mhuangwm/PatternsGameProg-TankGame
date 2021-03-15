@@ -117,3 +117,19 @@ class ExplosionsLayer(Layer):
             self.renderTile(surface,explosion['position'],Vector2(frameIndex,4))
             explosion['frameIndex'] += 0.5
         self.explosions = [ explosion for explosion in self.explosions if explosion['frameIndex'] < self.maxFrameIndex ]
+
+class SoundLayer(Layer):
+    def __init__(self, fireFile, explosionFile):
+        self.fireSound = pygame.mixer.Sound(fireFile)
+        self.fireSound.set_volume(0.2)
+        self.explosionSound = pygame.mixer.Sound(explosionFile)
+        self.explosionSound.set_volume(0.2)
+
+    def unitDestroyed(self, unit):
+        self.explosionSound.play()
+
+    def bulletFired(self, unit):
+        self.fireSound.play()
+       
+    def render(self, surface):
+        pass
