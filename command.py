@@ -114,8 +114,8 @@ class DeleteDestroyedCommand(Command):
         
         
 class LoadLevelCommand(Command):
-    def __init__(self,ui,fileName):
-        self.ui = ui
+    def __init__(self,gameMode,fileName):
+        self.gameMode = gameMode
         self.fileName = fileName
         
     def decodeLayer(self,tileMap,layer):
@@ -215,7 +215,7 @@ class LoadLevelCommand(Command):
             raise RuntimeError("Error in {}: 5 layers are expected".format(self.fileName))
 
         # World size
-        state = self.ui.gameState
+        state = self.gameMode.gameState
         state.worldSize = Vector2(tileMap.width,tileMap.height)    
 
         # Ground layer
@@ -223,7 +223,7 @@ class LoadLevelCommand(Command):
         cellSize = Vector2(tileset.tilewidth,tileset.tileheight)
         state.ground[:] = array
         imageFile = tileset.image.source
-        self.ui.layers[0].setTileset(cellSize,imageFile)
+        self.gameMode.layers[0].setTileset(cellSize,imageFile)
 
         # Walls layer
         tileset, array = self.decodeArrayLayer(tileMap,tileMap.layers[1])
@@ -231,7 +231,7 @@ class LoadLevelCommand(Command):
             raise RuntimeError("Error in {}: tile sizes must be the same in all layers".format(self.fileName))
         state.walls[:] = array
         imageFile = tileset.image.source
-        self.ui.layers[1].setTileset(cellSize,imageFile)
+        self.gameMode.layers[1].setTileset(cellSize,imageFile)
 
         # Units layer
         tanksTileset, tanks = self.decodeUnitsLayer(state,tileMap,tileMap.layers[2])
@@ -243,10 +243,10 @@ class LoadLevelCommand(Command):
         state.units[:] = tanks + towers
         cellSize = Vector2(tanksTileset.tilewidth,tanksTileset.tileheight)
         imageFile = tanksTileset.image.source
-        self.ui.layers[2].setTileset(cellSize,imageFile)
+        self.gameMode.layers[2].setTileset(cellSize,imageFile)
 
         # Player units
-        self.ui.playerUnit = tanks[0]      
+        self.gameMode.playerUnit = tanks[0]      
         
         # Explosions layers
         tileset, array = self.decodeArrayLayer(tileMap,tileMap.layers[4])
@@ -254,8 +254,11 @@ class LoadLevelCommand(Command):
             raise RuntimeError("Error in {}: tile sizes must be the same in all layers".format(self.fileName))
         state.bullets.clear()
         imageFile = tileset.image.source
-        self.ui.layers[3].setTileset(cellSize,imageFile)
+        self.gameMode.layers[3].setTileset(cellSize,imageFile)
         
         # Window
-        windowSize = state.worldSize.elementwise() * cellSize
-        self.ui.window = pygame.display.set_mode((int(windowSize.x),int(windowSize.y)))
+        worldSize = state.worldSize.elementwise() * cellSize
+        self.gameMode.notifyWorldSizeChanged(worldSize)
+        
+        # Resume game
+        self.gameMode.gameOver = False 

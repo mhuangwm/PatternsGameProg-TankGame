@@ -20,16 +20,67 @@ class UserInterface():
         
         # Modes
         self.playGameMode = None
-        self.overlayGameMode = MenuGameMode(self)
+        self.overlayGameMode = MenuGameMode()
+        self.overlayGameMode.addObserver(self)
         self.currentActiveMode = 'Overlay'
         
+        # Music
+        pygame.mixer.music.load("17718_1462204250.ogg")
+        pygame.mixer.music.play(loops=-1)
+
         # Loop properties
         self.clock = pygame.time.Clock()
         self.running = True        
         
+    def gameWon(self):
+        self.showMessage('Victory !')
+        pygame.mixer.music.load("17382_1461858477.ogg")
+        pygame.mixer.music.play(loops=-1)
+
+    def gameLost(self):
+        self.showMessage("GAME OVER")
+        pygame.mixer.music.load("17675_1462199580.ogg")
+        pygame.mixer.music.play(loops=-1)
+
+    def loadLevelRequested(self, fileName):
+        if self.playGameMode is None:
+            self.playGameMode = PlayGameMode()
+            self.playGameMode.addObserver(self)
+        self.playGameMode.commands.append(LoadLevelCommand(self.playGameMode,fileName))
+        try:
+            self.playGameMode.update()
+            self.currentActiveMode = 'Play'
+        except Exception as ex:
+            print(ex)
+            self.playGameMode = None
+            self.showMessage("Level loading failed :-(")
+
+        pygame.mixer.music.load("17687_1462199612.ogg")
+        pygame.mixer.music.play(loops=-1)
+
+    def worldSizeChanged(self, worldSize):
+        self.window = pygame.display.set_mode((int(worldSize.x),int(worldSize.y)))
+        
+    def showGameRequested(self):
+        if self.playGameMode is not None:
+            self.currentActiveMode = 'Play'
+
+    def showMenuRequested(self):
+        self.overlayGameMode = MenuGameMode()
+        self.overlayGameMode.addObserver(self)
+        self.currentActiveMode = 'Overlay'
+        
+    def showMessage(self, message):
+        self.overlayGameMode = MessageGameMode(message)
+        self.overlayGameMode.addObserver(self)
+        self.currentActiveMode = 'Overlay'
+        
+    def quitRequested(self):
+        self.running = False
+
     def loadLevel(self, fileName):
         if self.playGameMode is None:
-            self.playGameMode = PlayGameMode(self)
+            self.playGameMode = PlayGameMode()
         self.playGameMode.commands.append(LoadLevelCommand(self.playGameMode,fileName))
         try:
             self.playGameMode.update()
@@ -44,11 +95,11 @@ class UserInterface():
             self.currentActiveMode = 'Play'
 
     def showMenu(self):
-        self.overlayGameMode = MenuGameMode(self)
+        self.overlayGameMode = MenuGameMode()
         self.currentActiveMode = 'Overlay'
         
     def showMessage(self, message):
-        self.overlayGameMode = MessageGameMode(self, message)
+        self.overlayGameMode = MessageGameMode(message)
         self.currentActiveMode = 'Overlay'
         
     def quitGame(self):

@@ -4,6 +4,10 @@ from layer import *
 from command import *
 
 class GameMode():
+    
+    def __init__(self):
+        self.observers = []
+
     def processInput(self):
         raise NotImplementedError()
     def update(self):
@@ -11,22 +15,53 @@ class GameMode():
     def render(self, window):
         raise NotImplementedError()
 
+    def addObserver(self, observer):
+        self.observers.append(observer)
+
+    def notifyLoadLevelRequested(self, fileName):
+        for observer in self.observers:
+            observer.loadLevelRequested(fileName)
+
+    def notifyWorldSizeChanged(self, worldSize):
+        for observer in self.observers:
+            observer.worldSizeChanged(worldSize)
+
+    def notifyShowMenuRequested(self):
+        for observer in self.observers:
+            observer.showMenuRequested()
+        
+    def notifyShowGameRequested(self):
+        for observer in self.observers:
+            observer.showGameRequested()
+    
+    def notifyGameWon(self):
+        for observer in self.observers:
+            observer.gameWon()
+
+    def notifyGameLost(self):
+        for observer in self.observers:
+            observer.gameLost()
+
+    def notifyQuitRequested(self):
+        for observer in self.observers:
+            observer.quitRequested()
+
 class MessageGameMode(GameMode):
-    def __init__(self, ui, message):        
-        self.ui = ui
+    def __init__(self, message):        
+        super().__init__()
         self.font = pygame.font.Font("BD_Cartoon_Shout.ttf", 36)
         self.message = message
 
     def processInput(self):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                self.ui.quitGame()
+                self.notifyQuitRequested()
                 break
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE \
                 or event.key == pygame.K_SPACE \
                 or event.key == pygame.K_RETURN:
-                    self.ui.showMenu()
+                    self.notifyShowGameRequested()
                     
     def update(self):
         pass
@@ -38,8 +73,8 @@ class MessageGameMode(GameMode):
         window.blit(surface, (x, y))
 
 class MenuGameMode(GameMode):
-    def __init__(self, ui):        
-        self.ui = ui
+    def __init__(self):        
+        super().__init__()
         
         # Font
         self.titleFont = pygame.font.Font("BD_Cartoon_Shout.ttf", 72)
@@ -49,19 +84,19 @@ class MenuGameMode(GameMode):
         self.menuItems = [
             {
                 'title': 'Level 1',
-                'action': lambda: self.ui.loadLevel("level1.tmx")
+                'action': lambda: self.notifyLoadLevelRequested("level1.tmx")
             },
             {
                 'title': 'Level 2',
-                'action': lambda: self.ui.loadLevel("level2.tmx")
+                'action': lambda: self.notifyLoadLevelRequested("level2.tmx")
             },
             {
                 'title': 'Level 3',
-                'action': lambda: self.ui.loadLevel("level3.tmx")
+                'action': lambda: self.notifyLoadLevelRequested("level3.tmx")
             },
             {
                 'title': 'Quit',
-                'action': lambda: self.ui.quitGame()
+                'action': lambda: self.notifyQuitRequested()
             }
         ]        
 
@@ -78,11 +113,11 @@ class MenuGameMode(GameMode):
     def processInput(self):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                self.ui.quitGame()
+                self.notifyQuitRequested()
                 break
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
-                    self.ui.showGame()
+                    self.notifyShowGameRequested()
                 elif event.key == pygame.K_DOWN:
                     if self.currentMenuItem < len(self.menuItems) - 1:
                         self.currentMenuItem += 1
@@ -126,8 +161,8 @@ class MenuGameMode(GameMode):
             
 
 class PlayGameMode(GameMode):
-    def __init__(self, ui):
-        self.ui = ui
+    def __init__(self):
+        super().__init__()
         
         # Game state
         self.gameState = GameState()
@@ -168,11 +203,11 @@ class PlayGameMode(GameMode):
         mouseClicked = False
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                self.ui.quitGame()
+                self.notifyQuitRequested()
                 break
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
-                    self.ui.showMenu()
+                    self.notifyShowMenuRequested()
                     break
                 elif event.key == pygame.K_RIGHT:
                     moveVector.x = 1
@@ -241,7 +276,7 @@ class PlayGameMode(GameMode):
         # Check game over
         if self.playerUnit.status != "alive":
             self.gameOver = True
-            self.ui.showMessage("GAME OVER")
+            self.notifyGameLost()
         else:
             oneEnemyStillLives = False
             for unit in self.gameState.units:
@@ -252,7 +287,7 @@ class PlayGameMode(GameMode):
                     break
             if not oneEnemyStillLives:
                 self.gameOver = True
-                self.ui.showMessage("Victory !")
+                self.notifyGameWon()
         
     def render(self, window):
         for layer in self.layers:
